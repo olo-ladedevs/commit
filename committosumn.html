@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Make the World Better</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cream: #f5f0e8;
+    --ink: #1a1208;
+    --gold: #c8a84b;
+    --rust: #a0522d;
+    --slate: #4a5568;
+    --paper: #ede8dc;
+  }
+
+  html {
+    background: var(--ink);
+    font-family: 'Cormorant Garamond', serif;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 16px 72px;
+  }
+
+  /* Custom cursor — desktop only */
+  #cursor, #cursor-ring { display: none; }
+  @media (pointer: fine) {
+    body { cursor: none; }
+    #cursor {
+      display: block; position: fixed;
+      width: 8px; height: 8px; background: var(--gold);
+      border-radius: 50%; pointer-events: none; z-index: 9999;
+      transform: translate(-50%,-50%); mix-blend-mode: screen;
+    }
+    #cursor-ring {
+      display: block; position: fixed;
+      width: 32px; height: 32px;
+      border: 1px solid rgba(200,168,75,0.4);
+      border-radius: 50%; pointer-events: none; z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: left 0.16s ease, top 0.16s ease;
+    }
+  }
+
+  #canvas {
+    position: fixed; inset: 0; z-index: 0;
+    opacity: 0.5; pointer-events: none;
+  }
+
+  #card {
+    position: relative; z-index: 10;
+    width: min(600px, 100%);
+    background: var(--cream);
+    padding: clamp(28px,6vw,52px) clamp(20px,6vw,48px) clamp(28px,6vw,44px);
+    text-align: center;
+    box-shadow:
+      0 0 0 1px rgba(200,168,75,0.2),
+      0 40px 100px rgba(0,0,0,0.8),
+      inset 0 0 60px rgba(200,168,75,0.04);
+    opacity: 0; transform: translateY(20px);
+    animation: rise 1.2s cubic-bezier(0.16,1,0.3,1) 0.3s forwards;
+  }
+  @keyframes rise { to { opacity:1; transform:translateY(0); } }
+
+  .ornament {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 28px; color: var(--gold);
+    font-size: 11px; letter-spacing: 0.3em;
+    text-transform: uppercase; font-family: 'Courier Prime', monospace;
+  }
+  .ornament::before, .ornament::after { content:''; flex:1; height:1px; }
+  .ornament::before { background: linear-gradient(90deg,transparent,var(--gold)); }
+  .ornament::after  { background: linear-gradient(90deg,var(--gold),transparent); }
+
+  h1 {
+    font-size: clamp(26px,5vw,38px); font-weight: 300;
+    color: var(--ink); line-height: 1.25; margin-bottom: 8px;
+  }
+  h1 em { font-style:italic; color:var(--rust); }
+
+  .sub {
+    font-size: 12px; color: var(--slate);
+    letter-spacing: 0.12em; font-family: 'Courier Prime', monospace;
+    margin-bottom: 32px; text-transform: uppercase;
+  }
+
+  #input-area { position: relative; margin-bottom: 20px; }
+
+  textarea {
+    width: 100%; min-height: 100px; padding: 14px 16px;
+    background: var(--paper);
+    border: 1px solid rgba(26,18,8,0.15); border-radius: 2px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 17px; color: var(--ink);
+    resize: none; outline: none; line-height: 1.6;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  textarea::placeholder { color: rgba(26,18,8,0.3); font-style:italic; }
+  textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,168,75,0.1); }
+
+  #counter {
+    position: absolute; bottom: 10px; right: 14px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px; color: rgba(26,18,8,0.25); pointer-events:none;
+  }
+
+  #commit-btn {
+    display: flex; align-items:center; justify-content:center; gap:10px;
+    width:100%; padding:14px;
+    background:var(--ink); color:var(--cream);
+    border:none; border-radius:2px;
+    font-family:'Courier Prime',monospace;
+    font-size:12px; letter-spacing:0.2em; text-transform:uppercase;
+    cursor:pointer;
+    transition: transform 0.2s, box-shadow 0.3s;
+    position:relative; overflow:hidden;
+  }
+  #commit-btn::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,var(--gold),var(--rust));
+    opacity:0; transition:opacity 0.4s;
+  }
+  #commit-btn:hover::before { opacity:1; }
+  #commit-btn:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(200,168,75,0.3); }
+  #commit-btn:active { transform:translateY(0); }
+  #commit-btn > * { position:relative; z-index:1; }
+
+  .divider {
+    display:flex; align-items:center; gap:16px;
+    margin:24px 0; color:rgba(26,18,8,0.25);
+    font-size:10px; font-family:'Courier Prime',monospace; letter-spacing:0.2em;
+  }
+  .divider::before,.divider::after { content:''; flex:1; height:1px; background:rgba(26,18,8,0.1); }
+
+  #acts-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:left; }
+
+  .act {
+    padding:11px 13px; background:var(--paper);
+    border:1px solid transparent; border-radius:2px;
+    cursor:pointer;
+    transition:border-color 0.2s, background 0.2s, transform 0.2s;
+    position:relative; overflow:hidden;
+  }
+  .act::after {
+    content:''; position:absolute; left:0; top:0;
+    width:3px; height:100%; background:var(--gold);
+    transform:scaleY(0); transform-origin:bottom; transition:transform 0.2s;
+  }
+  .act:hover { border-color:rgba(200,168,75,0.3); background:#e8e2d4; transform:translateX(2px); }
+  .act:hover::after { transform:scaleY(1); }
+  .act-emoji { font-size:17px; margin-bottom:3px; display:block; }
+  .act-title {
+    font-family:'Courier Prime',monospace; font-size:10px;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--ink);
+    display:block; margin-bottom:2px;
+  }
+  .act-desc { font-size:12px; font-style:italic; color:var(--slate); line-height:1.35; }
+
+  .footnote {
+    margin-top:20px; font-size:11px; color:rgba(26,18,8,0.3);
+    font-family:'Courier Prime',monospace; letter-spacing:0.08em;
+  }
+
+  /* ── Response overlay ── */
+  #response-screen {
+    position:fixed; inset:0; z-index:200;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(26,18,8,0.97);
+    opacity:0; pointer-events:none;
+    transition:opacity 0.5s ease;
+    padding:24px; overflow-y:auto;
+  }
+  #response-screen.visible { opacity:1; pointer-events:all; }
+
+  #response-card {
+    width:min(600px,100%);
+    padding:clamp(28px,6vw,48px);
+    background:var(--cream); text-align:center;
+    box-shadow:0 40px 120px rgba(0,0,0,0.9);
+    transform:scale(0.96);
+    transition:transform 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s;
+    margin:auto;
+  }
+  #response-screen.visible #response-card { transform:scale(1); }
+
+  #response-impact {
+    display:inline-block; padding:7px 22px;
+    background:var(--ink); color:var(--gold);
+    font-family:'Courier Prime',monospace;
+    font-size:11px; letter-spacing:0.25em; text-transform:uppercase;
+    margin-bottom:24px;
+    opacity:0; transition:opacity 0.5s ease 0.3s; min-height:34px;
+  }
+  #response-screen.visible #response-impact { opacity:1; }
+
+  #response-text {
+    font-size:clamp(16px,3vw,21px); font-weight:300;
+    line-height:1.75; color:var(--ink);
+    margin:20px 0 28px; min-height:72px;
+  }
+
+  .loading-dots span { animation:blink 1.2s infinite; color:var(--gold); }
+  .loading-dots span:nth-child(2) { animation-delay:0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+
+  #back-btn {
+    background:none; border:1px solid rgba(26,18,8,0.2);
+    color:var(--slate); padding:10px 28px;
+    font-family:'Courier Prime',monospace; font-size:11px;
+    letter-spacing:0.15em; text-transform:uppercase;
+    cursor:pointer; border-radius:2px;
+    transition:border-color 0.3s, color 0.3s;
+  }
+  #back-btn:hover { border-color:var(--gold); color:var(--ink); }
+
+  .ripple {
+    position:absolute; border-radius:50%;
+    background:rgba(200,168,75,0.3);
+    transform:scale(0);
+    animation:ripple-anim 0.7s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes ripple-anim { to { transform:scale(4); opacity:0; } }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="canvas"></canvas>
+
+<div id="card">
+  <div class="ornament">one good thing</div>
+  <h1>Make the world<br><em>a better place.</em></h1>
+  <p class="sub">No mistakes. No excuses. Just this.</p>
+
+  <div id="input-area">
+    <textarea id="action-input" placeholder="What's the one thing you'll do today…" maxlength="280"></textarea>
+    <span id="counter">0 / 280</span>
+  </div>
+
+  <button id="commit-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+    <span>Commit to this</span>
+  </button>
+
+  <div class="divider">or start here</div>
+  <div id="acts-grid"></div>
+
+  <p class="footnote">Small acts compound. The world bends toward the deliberate.</p>
+</div>
+
+<div id="response-screen">
+  <div id="response-card">
+    <div class="ornament">your commitment</div>
+    <div id="response-impact"></div>
+    <div id="response-text"></div>
+    <button id="back-btn">← Make another</button>
+  </div>
+</div>
+
+<script>
+// ── Cursor ────────────────────────────────────────────────────
+const cursorEl = document.getElementById('cursor');
+const ringEl   = document.getElementById('cursor-ring');
+document.addEventListener('mousemove', e => {
+  cursorEl.style.left = e.clientX + 'px'; cursorEl.style.top = e.clientY + 'px';
+  ringEl.style.left   = e.clientX + 'px'; ringEl.style.top  = e.clientY + 'px';
+});
+
+// ── Particles ─────────────────────────────────────────────────
+const cv = document.getElementById('canvas');
+const cx = cv.getContext('2d');
+let W, H, pts = [];
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+function Pt() {
+  this.x=Math.random()*W; this.y=Math.random()*H;
+  this.r=Math.random()*1.1+0.2; this.sp=Math.random()*0.28+0.04;
+  this.a=Math.random()*Math.PI*2; this.op=Math.random()*0.45+0.08;
+}
+for (let i=0;i<100;i++) pts.push(new Pt());
+(function draw(){
+  cx.clearRect(0,0,W,H);
+  pts.forEach(p=>{
+    cx.beginPath(); cx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    cx.fillStyle=`rgba(200,168,75,${p.op})`; cx.fill();
+    p.x+=Math.cos(p.a)*p.sp; p.y+=Math.sin(p.a)*p.sp;
+    p.a+=(Math.random()-0.5)*0.02;
+    if(p.x<0||p.x>W||p.y<0||p.y>H){p.x=Math.random()*W;p.y=Math.random()*H;}
+  });
+  requestAnimationFrame(draw);
+})();
+
+// ── Acts pool (10 total, 8 shown randomly per load) ───────────
+const ALL_ACTS = [
+  { emoji:'📞', title:'Reach Out',    desc:'The call you\'ve been avoiding',       act:'Call someone you\'ve been meaning to reach out to. Say what\'s true.' },
+  { emoji:'🤲', title:'Give',         desc:'Without keeping score',                act:'Give something away you no longer need — time, money, a skill, an object.' },
+  { emoji:'✦',  title:'Acknowledge',  desc:'Be honest about what you see',         act:'Tell someone specifically what you admire about them — and why it matters.' },
+  { emoji:'⟳',  title:'Begin',        desc:'Five minutes. Right now.',             act:'Do the thing you keep procrastinating. Start with five minutes. No mistakes.' },
+  { emoji:'🌱', title:'Plant',        desc:'Something that outlives today',        act:'Do one thing whose benefit you won\'t see for years — plant a seed, teach a skill, write a letter.' },
+  { emoji:'🤝', title:'Repair',       desc:'Mend what\'s been fraying',            act:'Reach out to someone you\'ve had friction with. Not to win — just to close the distance.' },
+  { emoji:'👂', title:'Listen',       desc:'Actually hear someone today',          act:'Have one conversation where you ask more than you say. No advice unless asked.' },
+  { emoji:'✉️', title:'Write',        desc:'The letter they\'ll keep forever',     act:'Write a note to someone who changed your life and may not know it.' },
+  { emoji:'🛑', title:'Stop',         desc:'Break one harmful pattern',            act:'Name one habit that harms you or someone else — and choose not to do it today.' },
+  { emoji:'💡', title:'Share',        desc:'Give away what you know',              act:'Teach something you know for free — a skill, a shortcut, a piece of hard-won wisdom.' },
+];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i=a.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+const shown = shuffle(ALL_ACTS).slice(0, 8);
+const grid  = document.getElementById('acts-grid');
+shown.forEach(item => {
+  const div = document.createElement('div');
+  div.className = 'act';
+  div.dataset.act = item.act;
+  div.innerHTML = `<span class="act-emoji">${item.emoji}</span><span class="act-title">${item.title}</span><span class="act-desc">${item.desc}</span>`;
+  grid.appendChild(div);
+});
+
+// ── Textarea ──────────────────────────────────────────────────
+const ta      = document.getElementById('action-input');
+const counter = document.getElementById('counter');
+
+grid.addEventListener('click', e => {
+  const act = e.target.closest('.act');
+  if (!act) return;
+  ta.value = act.dataset.act;
+  counter.textContent = `${ta.value.length} / 280`;
+  ta.focus();
+});
+
+ta.addEventListener('input', () => { counter.textContent = `${ta.value.length} / 280`; });
+
+// ── Tone variety ensures different responses each time ────────
+const TONES = [
+  'spare and poetic, like a haiku drawn out into prose — precise, no word wasted',
+  'warm and grounding — like a mentor who believes in you without flattery or performance',
+  'quietly fierce, as if this small act is the turning point in a longer story',
+  'philosophical and wide-lens — draw on the long arc of human history and what compounds',
+  'intimate and raw, as if whispering something true that rarely gets said aloud',
+];
+
+// ── Commit ────────────────────────────────────────────────────
+const btn            = document.getElementById('commit-btn');
+const responseScreen = document.getElementById('response-screen');
+const responseText   = document.getElementById('response-text');
+const responseImpact = document.getElementById('response-impact');
+
+btn.addEventListener('click', async function(e) {
+  const text = ta.value.trim();
+  if (!text) {
+    ta.style.borderColor = '#a0522d';
+    setTimeout(() => ta.style.borderColor = '', 700);
+    return;
+  }
+
+  // Ripple effect
+  const rect = btn.getBoundingClientRect();
+  const rip  = document.createElement('div');
+  rip.className = 'ripple';
+  rip.style.cssText = `left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px;width:20px;height:20px`;
+  btn.appendChild(rip);
+  setTimeout(() => rip.remove(), 800);
+
+  // Show loading
+  responseImpact.textContent = '';
+  responseText.innerHTML = '<div class="loading-dots"><span>●</span><span>●</span><span>●</span></div>';
+  responseScreen.classList.add('visible');
+
+  const tone = TONES[Math.floor(Math.random() * TONES.length)];
+  const seed = Date.now().toString(36); // always unique
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are a voice that speaks to people who've just made a commitment to improve the world.
+Tone for this specific response: ${tone}.
+Write 2–3 sentences acknowledging their commitment. Make them feel its weight and beauty.
+Be original every single time. No clichés. No "Great choice!" energy. No corporate warmth.
+Write in second person. (unique id: ${seed})
+Then write one all-caps phrase under 8 words that names the kind of ripple this creates.
+Separate the two parts with exactly: [IMPACT]`,
+        messages: [{ role: 'user', content: `My commitment: "${text}"` }]
+      })
+    });
+
+    const data  = await res.json();
+    const full  = (data.content || []).map(b => b.text || '').join('');
+    const parts = full.split('[IMPACT]');
+
+    responseText.textContent = parts[0].trim();
+    if (parts[1]) responseImpact.textContent = parts[1].trim();
+
+  } catch {
+    responseText.textContent = 'The commitment stands regardless of what the network says. Write it down. Do it anyway.';
+    responseImpact.textContent = 'THE WORLD IS WAITING';
+  }
+});
+
+// ── Back ──────────────────────────────────────────────────────
+document.getElementById('back-btn').addEventListener('click', () => {
+  responseScreen.classList.remove('visible');
+  ta.value = '';
+  counter.textContent = '0 / 280';
+});
+</script>
+</body>
+</html>
+

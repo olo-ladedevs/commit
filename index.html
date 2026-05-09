@@ -393,34 +393,23 @@ btn.addEventListener('click', async function(e) {
   const seed = Date.now().toString(36); // always unique
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: `You are a voice that speaks to people who've just made a commitment to improve the world.
-Tone for this specific response: ${tone}.
-Write 2–3 sentences acknowledging their commitment. Make them feel its weight and beauty.
-Be original every single time. No clichés. No "Great choice!" energy. No corporate warmth.
-Write in second person. (unique id: ${seed})
-Then write one all-caps phrase under 8 words that names the kind of ripple this creates.
-Separate the two parts with exactly: [IMPACT]`,
-        messages: [{ role: 'user', content: `My commitment: "${text}"` }]
-      })
-    });
+  const res = await fetch('https://commit-api-seven.vercel.app/api/commit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ commitment: text, tone, seed })
+  });
 
-    const data  = await res.json();
-    const full  = (data.content || []).map(b => b.text || '').join('');
-    const parts = full.split('[IMPACT]');
+  const data = await res.json();
+  const full = data.text || '';
+  const parts = full.split('[IMPACT]');
 
-    responseText.textContent = parts[0].trim();
-    if (parts[1]) responseImpact.textContent = parts[1].trim();
+  responseText.textContent = parts[0].trim();
+  if (parts[1]) responseImpact.textContent = parts[1].trim();
 
-  } catch {
-    responseText.textContent = 'The commitment stands regardless of what the network says. Write it down. Do it anyway.';
-    responseImpact.textContent = 'THE WORLD IS WAITING';
-  }
+} catch {
+  responseText.textContent = 'The commitment stands regardless of what the network says. Write it down. Do it anyway.';
+  responseImpact.textContent = 'THE WORLD IS WAITING';
+ }
 });
 
 // ── Back ──────────────────────────────────────────────────────
